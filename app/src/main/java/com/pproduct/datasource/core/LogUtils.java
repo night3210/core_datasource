@@ -47,6 +47,9 @@ public final class LogUtils {
     public static void logi(String message) {
         log(message, Log.INFO);
     }
+    public static void logw(String message) {
+        log(message, Log.WARN);
+    }
     public static void loge(String message) {
         log(message, Log.ERROR);
     }
@@ -69,7 +72,7 @@ public final class LogUtils {
                 writeExceptionToFile(logString,loglevel);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
     }
 

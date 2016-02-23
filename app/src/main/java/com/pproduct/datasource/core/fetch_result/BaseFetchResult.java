@@ -15,14 +15,17 @@ public abstract class BaseFetchResult<T> {
     protected List<T> array;
     protected Throwable lastError;
 
-    public BaseFetchResult(List list) {
-        if (validateList(list)) return;
-        this.array = parseList(list);
-    }
-    @SuppressWarnings("unchecked")
-    public BaseFetchResult(Object result) {
-        if (validateList(result)) return;
-        this.array = parseList((List)result);
+    public BaseFetchResult(Object list, boolean local) {
+        if(local) {
+            if(validateList(list)) {
+                return;
+            }
+        } else {
+            if(validateResult(list)) {
+                return;
+            }
+        }
+        this.array = parseList((List<Object>) list);
     }
     protected boolean validateList(Object list) {
         if (!(list instanceof List<?>)) {

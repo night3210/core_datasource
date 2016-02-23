@@ -11,12 +11,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Created by Developer on 2/12/2016.
  */
 public class SimpleFetchResult<T> extends BaseFetchResult {
-    public SimpleFetchResult(List list) {
-        super(list);
-    }
-
-    public SimpleFetchResult(Object result) {
-        super(result);
+    public SimpleFetchResult(Object list, boolean local) {
+        super(list, local);
     }
 
     @Override
