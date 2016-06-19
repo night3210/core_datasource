@@ -16,5 +16,5 @@ public interface Fetch {
     }
     void fetchOnline(ListDataSource.Paging paging, DataCallback callback);
     void fetchOffline(DataCallback callback);
-    void storeItems(BaseFetchResult result, BoolCallback callback);
+    void storeItems(BaseFetchResult<DataObject> result, BoolCallback callback);
 }
