@@ -20,11 +20,6 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             return skip;
         }
     }
-    public enum FetchMode {
-        OnlineOffline,
-        Online,
-        Offline
-    }
     protected interface FetchResultInterface {
         BaseFetchResult localFetch(Object object, boolean isLocal);
         BaseFetchResult onlineFetch(Object object, boolean isLocal);
@@ -36,7 +31,7 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     protected ChangedCallback mChangedListener;
     protected DataStructure mDataStructure;
     protected Fetch mFetch;
-    protected FetchMode mFetchMode = FetchMode.OnlineOffline;
+    protected Fetch.Mode mFetchMode = Fetch.Mode.OnlineOffline;
     protected FetchResultInterface fetchResultBlock;
 
     public ListDataSource(Fetch fetch) {
@@ -125,7 +120,7 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     }
 
     private void fetchOfflineData(final boolean refresh) {
-        if(mFetchMode == FetchMode.Online)
+        if(mFetchMode == Fetch.Mode.Online)
             return;
         mFetch.fetchOffline(new DataCallback() {
             @Override
@@ -182,10 +177,10 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     DataStructure dataStructureFromFetchResult(BaseFetchResult fetchResult) {
         return new DataStructure(fetchResult);
     }
-    public FetchMode getFetchMode() {
+    public Fetch.Mode getFetchMode() {
         return mFetchMode;
     }
-    public void setFetchMode(FetchMode mFetchMode) {
+    public void setFetchMode(Fetch.Mode mFetchMode) {
         this.mFetchMode = mFetchMode;
     }
     @Override
