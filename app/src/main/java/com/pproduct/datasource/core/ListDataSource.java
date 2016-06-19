@@ -96,12 +96,12 @@ public class ListDataSource<T extends DataObject> extends DataSource {
                 itemsLoaded(res);
             }
             @Override
-            public void onError(Exception e) {
+            public void onError(Throwable e) {
                 if (failIfNeeded(e)) return;
             }
         };
     }
-    protected boolean failIfNeeded(Exception e) {
+    protected boolean failIfNeeded(Throwable e) {
         if (e != null) {
             parseRequestDidFail(e);
             return true;
@@ -131,7 +131,7 @@ public class ListDataSource<T extends DataObject> extends DataSource {
                 }
             }
             @Override
-            public void onError(Exception e) {
+            public void onError(Throwable e) {
                 e.printStackTrace();
             }
         });

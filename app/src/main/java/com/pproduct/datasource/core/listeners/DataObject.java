@@ -6,8 +6,7 @@ import java.util.Date;
  * Created by Developer on 2/11/2016.
  */
 public interface DataObject {
-    Date mCreatedAt=null;
-    Date mUpdatedAt=null;
-    String id="";
-
+    public Date getCreatedAt();
+    public Date getUpdatedAt();
+    public String getObjectId();
 }

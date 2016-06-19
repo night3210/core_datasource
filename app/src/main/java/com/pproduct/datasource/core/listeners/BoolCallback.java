@@ -5,5 +5,5 @@ package com.pproduct.datasource.core.listeners;
  */
 public interface BoolCallback {
     void onSuccess();
-    void onError(Exception e);
+    void onError(Throwable e);
 }

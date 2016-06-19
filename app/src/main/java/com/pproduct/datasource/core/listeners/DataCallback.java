@@ -5,5 +5,5 @@ package com.pproduct.datasource.core.listeners;
  */
 public interface DataCallback {
     void onSuccess(Object result);
-    void onError(Exception e);
+    void onError(Throwable th);
 }

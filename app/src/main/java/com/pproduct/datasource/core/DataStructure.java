@@ -97,14 +97,14 @@ public class DataStructure {
                     Date rd=null, ld=null;
                     switch (sorting) {
                         case DataStructureSortingUpdatedAt:
-                            ld = lhs.mUpdatedAt;
-                            rd = rhs.mUpdatedAt;
+                            ld = lhs.getUpdatedAt();
+                            rd = rhs.getUpdatedAt();
                             break;
                         case DataStructureSortingCreatedAtReverse:
                             dir = -1;
                         case DataStructureSortingCreatedAt:
-                            ld = lhs.mCreatedAt;
-                            rd = rhs.mCreatedAt;
+                            ld = lhs.getCreatedAt();
+                            rd = rhs.getCreatedAt();
                             break;
 //                        default:
 //                            throw new IllegalStateException("sorting not set");
