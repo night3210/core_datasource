@@ -125,7 +125,12 @@ public class DataStructure<T extends DataObject> {
     public List<T> processItems(List<T> items, int section) {
         if(items==null)
             return null;
-        CopyOnWriteArrayList<T> sectionArray = (CopyOnWriteArrayList<T>) sections.get(section);
+        CopyOnWriteArrayList<T> sectionArray = null;
+        if (sections != null && sections.size() > section) {
+            sectionArray = (CopyOnWriteArrayList<T>) sections.get(section);
+        } else {
+            sectionArray = new CopyOnWriteArrayList<>();
+        }
         sectionArray.addAllAbsent(items);
         switch (sorting) {
             case UpdatedAt:
