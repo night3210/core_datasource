@@ -83,7 +83,7 @@ public class DataStructure<T extends DataObject> {
     protected void putSection(List<T> array, int section) {
         if(sections==null)
             sections=new CopyOnWriteArrayList<>();
-        while(sections.size()<section)
+        while(sections.size() <= section)
             sections.add(new CopyOnWriteArrayList<T>());
         sections.set(section, array);
     }
