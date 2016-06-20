@@ -34,7 +34,7 @@ public class DataStructure<T extends DataObject> {
     }
 
     public interface CustomSortingProvider<H extends DataObject> {
-        public CopyOnWriteArrayList<H> sortedArrayFrom(List<H> sourceArray);
+        public List<H> sortedArrayFrom(List<H> sourceArray);
     }
 
     public void clear() {
@@ -132,9 +132,10 @@ public class DataStructure<T extends DataObject> {
             sectionArray = new CopyOnWriteArrayList<>();
         }
         sectionArray.addAllAbsent(items);
+        List<T> modifiableList = new ArrayList<>(sectionArray);
         switch (sorting) {
             case UpdatedAt:
-                Collections.sort(sectionArray, new Comparator<DataObject>() {
+                Collections.sort(modifiableList, new Comparator<DataObject>() {
                     @Override
                     public int compare(DataObject lhs, DataObject rhs) {
                         Date rd=rhs.getUpdatedAt();
@@ -144,7 +145,7 @@ public class DataStructure<T extends DataObject> {
                 });
                 break;
             case CreatedAt:
-                Collections.sort(sectionArray, new Comparator<DataObject>() {
+                Collections.sort(modifiableList, new Comparator<DataObject>() {
                     @Override
                     public int compare(DataObject lhs, DataObject rhs) {
                         Date rd=rhs.getCreatedAt();
@@ -154,7 +155,7 @@ public class DataStructure<T extends DataObject> {
                 });
                 break;
             case CreatedAtReverse:
-                Collections.sort(sectionArray, new Comparator<DataObject>() {
+                Collections.sort(modifiableList, new Comparator<DataObject>() {
                     @Override
                     public int compare(DataObject lhs, DataObject rhs) {
                         Date ld=rhs.getCreatedAt();
@@ -167,12 +168,12 @@ public class DataStructure<T extends DataObject> {
                     if (sortingProvider == null) {
                         throw new IllegalStateException("You need to provide sortingProvider if you choose Custom soring");
                     }
-                sectionArray = (CopyOnWriteArrayList<T>) sortingProvider.sortedArrayFrom(sectionArray);
+                modifiableList = (List<T>) sortingProvider.sortedArrayFrom(modifiableList);
                 break;
             case NoSorting:
                 break;
         }
-        return sectionArray;
+        return new CopyOnWriteArrayList<>(modifiableList);
     }
     protected void notifyListeners() {
         if(changedListener!=null)
