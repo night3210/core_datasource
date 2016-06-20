@@ -144,6 +144,22 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     protected void itemsLoaded(BaseFetchResult<T> fetchResult) {
         if (shouldClearList()) {
             mDataStructure=null;
+            // Not very good, but for now - ok
+            mFetch.storeItems(fetchResult, new BoolCallback() {
+                @Override
+                public void onSuccess() {
+                    if (itemsStoredListener != null) {
+                        itemsStoredListener.onSuccess();
+                    }
+                }
+
+                @Override
+                public void onError(Throwable e) {
+                    if (itemsStoredListener != null) {
+                        itemsStoredListener.onError(e);
+                    }
+                }
+            });
         }
         processFetchResult(fetchResult);
         updatePagingFlagsForListSize();
