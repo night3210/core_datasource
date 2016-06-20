@@ -5,9 +5,10 @@ import android.database.DataSetObserver;
 
 import com.pproduct.datasource.core.listeners.DataSourceStateListener;
 
-public abstract class DataSource {
+import java.util.Observable;
+
+public abstract class DataSource extends Observable{
     public enum State {INIT, LOAD_CONTENT, ERROR, CONTENT, NO_CONTENT, REFRESH_CONTENT}
-    private final DataSetObservable mDataSetObservable = new DataSetObservable();
 
     private State currentState = State.INIT;
     private Throwable currentError = null;
@@ -33,6 +34,11 @@ public abstract class DataSource {
         this.stateListener = stateListener;
     }
 
+    public boolean canRefresh() {
+        return currentState == State.ERROR
+                || currentState == State.CONTENT
+                || currentState == State.NO_CONTENT;
+    }
 
     public void contentLoaded(Throwable th) {
         if (th != null) {
@@ -93,19 +99,9 @@ public abstract class DataSource {
 
     protected void changeStateTo(State newState) {
         currentState = newState;
+        setChanged();
+        notifyObservers();
         if (stateListener != null)
             stateListener.dataSourceChangedState(this, newState);
-    }
-
-    public void registerDataSetObserver(DataSetObserver observer) {
-        mDataSetObservable.registerObserver(observer);
-    }
-
-    public void unregisterDataSetObserver(DataSetObserver observer) {
-        mDataSetObservable.unregisterObserver(observer);
-    }
-
-    public void notifyDataSetChanged() {
-        mDataSetObservable.notifyChanged();
     }
 }

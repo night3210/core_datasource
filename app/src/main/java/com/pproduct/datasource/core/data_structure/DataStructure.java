@@ -33,8 +33,8 @@ public class DataStructure<T extends DataObject> {
         }
     }
 
-    public interface CustomSortingProvider {
-        public CopyOnWriteArrayList<? extends DataObject> sortedArrayFrom(List<? extends DataObject> sourceArray);
+    public interface CustomSortingProvider<H extends DataObject> {
+        public CopyOnWriteArrayList<H> sortedArrayFrom(List<H> sourceArray);
     }
 
     public void clear() {

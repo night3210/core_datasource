@@ -3,6 +3,7 @@ package com.pproduct.datasource.core;
 import com.pproduct.datasource.core.data_structure.DataStructure;
 import com.pproduct.datasource.core.fetch_result.BaseFetchResult;
 import com.pproduct.datasource.core.fetch_result.SimpleFetchResult;
+import com.pproduct.datasource.core.listeners.BoolCallback;
 import com.pproduct.datasource.core.listeners.ChangedCallback;
 
 import com.pproduct.datasource.core.listeners.DataCallback;
@@ -21,19 +22,27 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             return skip;
         }
     }
-    protected interface FetchResultInterface {
-        BaseFetchResult localFetch(Object object, boolean isLocal);
-        BaseFetchResult onlineFetch(Object object, boolean isLocal);
+
+    protected interface FetchResultProvider<H extends DataObject> {
+        BaseFetchResult<H> fetchResultForLocal(Object object);
+        BaseFetchResult<H> fetchResult(Object object);
     }
+
+    protected interface DataStructureProvider<H extends DataObject> {
+        DataStructure<H> dataStructureForFetchResult(BaseFetchResult<H> fetchResult);
+    }
+
     private final int DEFAULT_LIMIT = 20;
     protected Paging mPaging;
     protected boolean mPagingEnabled = true;
     protected boolean mCanLoadMore;
     protected ChangedCallback mChangedListener;
-    protected DataStructure mDataStructure;
+    protected DataStructure<T> mDataStructure;
     protected Fetch mFetch;
     protected Fetch.Mode mFetchMode = Fetch.Mode.OnlineOffline;
-    protected FetchResultInterface fetchResultBlock;
+    protected FetchResultProvider<T> fetchResultProvider;
+    protected DataStructureProvider<T> dataStructureProvider;
+    protected BoolCallback itemsStoredListener;
 
     public ListDataSource(Fetch fetch) {
         super();
@@ -41,16 +50,24 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             throw new IllegalArgumentException("No fetch specified");
         this.mFetch = fetch;
         this.mPagingEnabled = true;
-        fetchResultBlock = new FetchResultInterface() {
+        setFetchResultProvider(new FetchResultProvider<T>() {
             @Override
-            public BaseFetchResult localFetch(Object object,boolean isLocal) {
-                return new SimpleFetchResult(object,true);
+            public BaseFetchResult<T> fetchResultForLocal(Object object) {
+                return new SimpleFetchResult<>(object,true);
             }
             @Override
-            public BaseFetchResult onlineFetch(Object object,boolean isLocal) {
-                return new SimpleFetchResult(object,false);
+            public BaseFetchResult<T> fetchResult(Object object) {
+                return new SimpleFetchResult<>(object,false);
             }
-        };
+        });
+
+        setDataStructureProvider(new DataStructureProvider<T>() {
+
+            @Override
+            public DataStructure<T> dataStructureForFetchResult(BaseFetchResult<T> fetchResult) {
+                return new DataStructure<>(fetchResult);
+            }
+        });
     }
     public Paging getPaging() {
         if(!mPagingEnabled)
@@ -61,14 +78,60 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         }
         return mPaging;
     }
+
+    protected void fetchOfflineData(final boolean refresh) {
+        if (mFetchMode == Fetch.Mode.Online) {
+            return; // Offline disabled
+        }
+        mFetch.fetchOffline(new DataCallback() {
+            @Override
+            public void onSuccess(Object result) {
+                if (mDataStructure == null || refresh) {
+                    if (mFetchMode == Fetch.Mode.Offline && shouldClearList()) {
+                        mDataStructure = null;
+                    }
+                    BaseFetchResult<T> fetchResult = createFetchResultForLocalObject(result);
+                    processFetchResult(fetchResult);
+                }
+                if (refresh) {
+                    contentLoaded(null);
+                }
+            }
+
+            @Override
+            public void onError(Throwable th) {
+                th.printStackTrace();
+                // Don't know why can it be
+                if (refresh) {
+                    contentLoaded(th);
+                }
+            }
+        });
+    }
+
     protected void runRequest() {
+        if (mFetchMode == Fetch.Mode.Offline) {
+            fetchOfflineData(true);
+            return;
+        }
         LogUtils.logi("start request");
         mFetch.fetchOnline(getPaging(), createResultBlock());
     }
+
     protected boolean shouldClearList() {
         return getPaging().skip == 0;
     }
-    public void loadNextPageIfNeeded() {
+
+    protected void updatePagingFlagsForListSize() {
+        if (!mPagingEnabled) {
+            return;
+        }
+        int size = mDataStructure.dataSize();
+        mCanLoadMore = mPaging.getSkip() + mPaging.getLimit() <= size;
+        mPaging.skip = size;
+    }
+
+    public void loadMoreIfPossible() {
         if (!mCanLoadMore)
             return;
         if (getCurrentState() != DataSource.State.CONTENT)
@@ -77,11 +140,13 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             return;
         startContentRefreshing();
     }
-    protected void itemsLoaded(BaseFetchResult fetchResult) {
+
+    protected void itemsLoaded(BaseFetchResult<T> fetchResult) {
         if (shouldClearList()) {
             mDataStructure=null;
         }
         processFetchResult(fetchResult);
+        updatePagingFlagsForListSize();
         contentLoaded(null);
     }
     protected DataCallback createResultBlock() {
@@ -89,7 +154,7 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             @Override
             public void onSuccess(Object result) {
                 LogUtils.logi("in");
-                BaseFetchResult res = createFetchResultFor(result);
+                BaseFetchResult<T> res = createFetchResultFor(result);
                 if (!res.validate()) {
                     parseRequestDidFail(res.getLastError());
                     return;
@@ -98,7 +163,7 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             }
             @Override
             public void onError(Throwable e) {
-                if (failIfNeeded(e)) return;
+                failIfNeeded(e);
             }
         };
     }
@@ -109,33 +174,13 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         }
         return false;
     }
+
     public void addItem(T item){
         mDataStructure.insertItem(item,0);
     }
-    protected void parseRequestDidFinish() {
-        contentLoaded(null);
-        notifyDataSetChanged();
-    }
+
     protected void parseRequestDidFail(Throwable th) {
         contentLoaded(th);
-    }
-
-    private void fetchOfflineData(final boolean refresh) {
-        if(mFetchMode == Fetch.Mode.Online)
-            return;
-        mFetch.fetchOffline(new DataCallback() {
-            @Override
-            public void onSuccess(Object result) {
-                if(refresh || mDataStructure==null) {
-                    BaseFetchResult res = createFetchResultForLocalObject(result);
-                    processFetchResult(res);
-                }
-            }
-            @Override
-            public void onError(Throwable e) {
-                e.printStackTrace();
-            }
-        });
     }
 
     @Override
@@ -144,8 +189,11 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         fetchOfflineData(false);
         runRequest();
     }
-    public void startContentReloading() {
-        getPaging().skip = 0;
+
+    public void refreshContentIfPossible() {
+        if (getPaging() != null) {
+            getPaging().skip = 0;
+        }
         super.startContentRefreshing();
         runRequest();
     }
@@ -164,7 +212,7 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         super.startContentRefreshing();
         runRequest();
     }
-    void processFetchResult(BaseFetchResult fetchResult) {
+    void processFetchResult(BaseFetchResult<T> fetchResult) {
         if(mDataStructure==null) {
             mDataStructure = dataStructureFromFetchResult(fetchResult);
         } else {
@@ -175,12 +223,15 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         if(mChangedListener!=null)
             mChangedListener.changed();
     }
-    DataStructure dataStructureFromFetchResult(BaseFetchResult fetchResult) {
-        return new DataStructure(fetchResult);
+
+    DataStructure<T> dataStructureFromFetchResult(BaseFetchResult<T> fetchResult) {
+        return getDataStructureProvider() == null ? null : getDataStructureProvider().dataStructureForFetchResult(fetchResult);
     }
+
     public Fetch.Mode getFetchMode() {
         return mFetchMode;
     }
+
     public void setFetchMode(Fetch.Mode mFetchMode) {
         this.mFetchMode = mFetchMode;
     }
@@ -189,11 +240,11 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         super.contentLoaded(th);
     }
 
-    protected BaseFetchResult createFetchResultFor(Object result) {
-        return fetchResultBlock==null ? null : fetchResultBlock.localFetch(result, false);
+    protected BaseFetchResult<T> createFetchResultFor(Object result) {
+        return getFetchResultProvider().fetchResult(result);
     }
-    protected BaseFetchResult createFetchResultForLocalObject(Object result) {
-        return fetchResultBlock==null ? null : fetchResultBlock.localFetch(result, true);
+    protected BaseFetchResult<T> createFetchResultForLocalObject(Object result) {
+        return getFetchResultProvider().fetchResultForLocal(result);
     }
     public DataStructure getDataStructure(){
         return mDataStructure;
@@ -202,4 +253,30 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     public boolean hasContent() {
         return mDataStructure.dataSize() > 0;
     }
+
+
+    public FetchResultProvider<T> getFetchResultProvider() {
+        return fetchResultProvider;
+    }
+
+    public void setFetchResultProvider(FetchResultProvider<T> fetchResultProvider) {
+        this.fetchResultProvider = fetchResultProvider;
+    }
+
+    public DataStructureProvider<T> getDataStructureProvider() {
+        return dataStructureProvider;
+    }
+
+    public void setDataStructureProvider(DataStructureProvider<T> dataStructureProvider) {
+        this.dataStructureProvider = dataStructureProvider;
+    }
+
+    public BoolCallback getItemsStoredListener() {
+        return itemsStoredListener;
+    }
+
+    public void setItemsStoredListener(BoolCallback itemsStoredListener) {
+        this.itemsStoredListener = itemsStoredListener;
+    }
+
 }
