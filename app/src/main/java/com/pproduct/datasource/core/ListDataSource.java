@@ -23,12 +23,12 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         }
     }
 
-    protected interface FetchResultProvider<H extends DataObject> {
+    public interface FetchResultProvider<H extends DataObject> {
         BaseFetchResult<H> fetchResultForLocal(Object object);
         BaseFetchResult<H> fetchResult(Object object);
     }
 
-    protected interface DataStructureProvider<H extends DataObject> {
+    public interface DataStructureProvider<H extends DataObject> {
         DataStructure<H> dataStructureForFetchResult(BaseFetchResult<H> fetchResult);
     }
 
