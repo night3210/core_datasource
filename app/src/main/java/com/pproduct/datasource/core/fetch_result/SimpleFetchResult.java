@@ -1,9 +1,5 @@
 package com.pproduct.datasource.core.fetch_result;
 
-import android.provider.ContactsContract;
-
-import com.pproduct.datasource.core.listeners.DataObject;
-
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 

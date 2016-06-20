@@ -27,6 +27,7 @@ public abstract class BaseFetchResult<T> {
         }
         this.array = parseList((List<Object>) list);
     }
+
     protected boolean validateList(Object list) {
         if (!(list instanceof List<?>)) {
             failWithReason(getClass().getName());
@@ -34,6 +35,7 @@ public abstract class BaseFetchResult<T> {
         }
         return false;
     }
+
     protected boolean validateResult(Object result) {
         if (!(result instanceof HashMap<?, ?>)) {
             failWithReason(getClass().getName());
@@ -41,9 +43,11 @@ public abstract class BaseFetchResult<T> {
         }
         return false;
     }
+
     public boolean validate() {
         return getSections() != null;
     }
+
     public Throwable getLastError() {
         return lastError;
     }
@@ -51,11 +55,13 @@ public abstract class BaseFetchResult<T> {
     protected void failWithReason(String reason) {
         lastError = ErrorUtils.createWrongServerDataException(reason);
     }
+
     public List<List<T>> getSections() {
         List<List<T>> list=new CopyOnWriteArrayList<>();
         list.add(array);
         return list;
     }
+
     protected abstract List<T> parseList(List<Object> list);
 }
 
