@@ -246,7 +246,7 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     protected BaseFetchResult<T> createFetchResultForLocalObject(Object result) {
         return getFetchResultProvider().fetchResultForLocal(result);
     }
-    public DataStructure getDataStructure(){
+    public DataStructure<T> getDataStructure(){
         return mDataStructure;
     }
     @Override
