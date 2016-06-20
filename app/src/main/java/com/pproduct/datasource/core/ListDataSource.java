@@ -1,5 +1,6 @@
 package com.pproduct.datasource.core;
 
+import com.pproduct.datasource.core.data_structure.DataStructure;
 import com.pproduct.datasource.core.fetch_result.BaseFetchResult;
 import com.pproduct.datasource.core.fetch_result.SimpleFetchResult;
 import com.pproduct.datasource.core.listeners.ChangedCallback;
