@@ -17,11 +17,11 @@ public abstract class BaseFetchResult<T> {
 
     public BaseFetchResult(Object list, boolean local) {
         if(local) {
-            if(validateList(list)) {
+            if(!validateList(list)) {
                 return;
             }
         } else {
-            if(validateResult(list)) {
+            if(!validateResult(list)) {
                 return;
             }
         }
