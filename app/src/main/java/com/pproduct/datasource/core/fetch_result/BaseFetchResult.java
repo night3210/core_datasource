@@ -3,15 +3,14 @@ package com.pproduct.datasource.core.fetch_result;
 import com.pproduct.datasource.core.ErrorUtils;
 import com.pproduct.datasource.core.listeners.DataObject;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by Developer on 2/12/2016.
  */
-public abstract class BaseFetchResult<T> {
+public abstract class BaseFetchResult<T extends DataObject> {
     protected List<T> array;
     protected Throwable lastError;
 
@@ -21,7 +20,7 @@ public abstract class BaseFetchResult<T> {
                 return;
             }
         } else {
-            if(!validateResult(list)) {
+            if(!validateList(list)) {
                 return;
             }
         }
@@ -31,17 +30,17 @@ public abstract class BaseFetchResult<T> {
     protected boolean validateList(Object list) {
         if (!(list instanceof List<?>)) {
             failWithReason(getClass().getName());
-            return true;
+            return false;
         }
-        return false;
+        return true;
     }
 
-    protected boolean validateResult(Object result) {
-        if (!(result instanceof HashMap<?, ?>)) {
+    protected boolean validateMapResult(Object result) {
+        if (!(result instanceof Map<?, ?>)) {
             failWithReason(getClass().getName());
-            return true;
+            return false;
         }
-        return false;
+        return true;
     }
 
     public boolean validate() {
