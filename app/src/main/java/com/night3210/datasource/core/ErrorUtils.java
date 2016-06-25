@@ -1,6 +1,4 @@
-package com.pproduct.datasource.core;
-
-import org.json.JSONObject;
+package com.night3210.datasource.core;
 
 /**
  * Created by Developer on 2/12/2016.

@@ -1,7 +1,7 @@
-package com.pproduct.datasource.core.fetch_result;
+package com.night3210.datasource.core.fetch_result;
 
-import com.pproduct.datasource.core.ErrorUtils;
-import com.pproduct.datasource.core.listeners.DataObject;
+import com.night3210.datasource.core.ErrorUtils;
+import com.night3210.datasource.core.listeners.DataObject;
 
 import java.util.List;
 import java.util.Map;

@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.pproduct.coredatasource">
+    package="com.night3210.datasource.core">
 
     <application
         android:allowBackup="true"

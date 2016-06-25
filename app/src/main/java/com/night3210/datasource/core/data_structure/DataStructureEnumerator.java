@@ -1,6 +1,6 @@
-package com.pproduct.datasource.core.data_structure;
+package com.night3210.datasource.core.data_structure;
 
-import com.pproduct.datasource.core.listeners.DataObject;
+import com.night3210.datasource.core.listeners.DataObject;
 
 import java.util.Enumeration;
 

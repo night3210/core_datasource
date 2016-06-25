@@ -1,9 +1,6 @@
-package com.pproduct.datasource.core;
+package com.night3210.datasource.core;
 
-import android.database.DataSetObservable;
-import android.database.DataSetObserver;
-
-import com.pproduct.datasource.core.listeners.DataSourceStateListener;
+import com.night3210.datasource.core.listeners.DataSourceStateListener;
 
 import java.util.Observable;
 

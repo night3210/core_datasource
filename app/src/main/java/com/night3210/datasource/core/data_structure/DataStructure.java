@@ -1,20 +1,19 @@
-package com.pproduct.datasource.core.data_structure;
+package com.night3210.datasource.core.data_structure;
 
 
 
-import com.pproduct.datasource.core.fetch_result.BaseFetchResult;
-import com.pproduct.datasource.core.listeners.ChangedCallback;
+import com.night3210.datasource.core.fetch_result.BaseFetchResult;
+import com.night3210.datasource.core.listeners.ChangedCallback;
 
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.ArrayList;
 
-import com.pproduct.datasource.core.listeners.DataObject;
+import com.night3210.datasource.core.listeners.DataObject;
 
 /**
  * Created by Developer on 1/28/2016.
