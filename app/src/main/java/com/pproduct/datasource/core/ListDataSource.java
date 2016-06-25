@@ -231,13 +231,12 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     void processFetchResult(BaseFetchResult<T> fetchResult) {
         if(mDataStructure==null) {
             mDataStructure = dataStructureFromFetchResult(fetchResult);
+            if(mChangedListener!=null)
+                mChangedListener.changed();
+            mDataStructure.setChangedListener(mChangedListener);
         } else {
             mDataStructure.processFetchResult(fetchResult);
-            //mDataStructure.clear();
-            //mDataStructure.addAll(fetchResult.getSections());
         }
-        if(mChangedListener!=null)
-            mChangedListener.changed();
     }
 
     DataStructure<T> dataStructureFromFetchResult(BaseFetchResult<T> fetchResult) {
@@ -267,9 +266,8 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     }
     @Override
     public boolean hasContent() {
-        return mDataStructure.dataSize() > 0;
+        return mDataStructure != null && mDataStructure.dataSize() > 0;
     }
-
 
     public FetchResultProvider<T> getFetchResultProvider() {
         return fetchResultProvider;

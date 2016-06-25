@@ -24,7 +24,7 @@ public abstract class BaseFetchResult<T extends DataObject> {
                 return;
             }
         }
-        this.array = parseList((List<Object>) list);
+        this.array = parseList((List) list);
     }
 
     protected boolean validateList(Object list) {
@@ -61,6 +61,6 @@ public abstract class BaseFetchResult<T extends DataObject> {
         return list;
     }
 
-    protected abstract List<T> parseList(List<Object> list);
+    protected abstract List<T> parseList(List list);
 }
 

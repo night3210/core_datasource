@@ -76,8 +76,7 @@ public class DataStructure<T extends DataObject> {
         for(int i=0;i<frSections.size();i++) {
             putSection(processItems(frSections.get(i), i), i);
         }
-        if(changedListener!=null)
-            changedListener.changed();
+        notifyListeners();
     }
 
     protected void putSection(List<T> array, int section) {
