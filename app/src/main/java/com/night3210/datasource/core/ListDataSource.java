@@ -293,4 +293,16 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         this.itemsStoredListener = itemsStoredListener;
     }
 
+    public ChangedCallback getChangedListener() {
+        return mChangedListener;
+    }
+
+    public void setChangedListener(ChangedCallback mChangedListener) {
+        this.mChangedListener = mChangedListener;
+        if (mDataStructure != null) {
+            mDataStructure.setChangedListener(mChangedListener);
+        }
+    }
+
+
 }
