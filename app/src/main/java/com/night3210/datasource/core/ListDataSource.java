@@ -207,6 +207,11 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     }
 
     public void refreshContentIfPossible() {
+        if (getCurrentState() == State.INIT
+                || getCurrentState() == State.LOAD_CONTENT
+                || getCurrentState() == State.REFRESH_CONTENT) {
+            return;
+        }
         if (getPaging() != null) {
             getPaging().skip = 0;
         }
