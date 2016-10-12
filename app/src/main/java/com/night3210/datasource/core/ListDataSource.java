@@ -43,6 +43,16 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     protected FetchResultProvider<T> fetchResultProvider;
     protected DataStructureProvider<T> dataStructureProvider;
     protected BoolCallback itemsStoredListener;
+    protected DataStructure.Sorting mDataStructureSorting;
+    protected DataStructure.CustomSortingProvider mDataStructureSortingProvider;
+
+    public void setDataStructureSortingProvider(DataStructure.CustomSortingProvider mDataStructureSortingProvider) {
+        this.mDataStructureSortingProvider = mDataStructureSortingProvider;
+    }
+
+    public void setDataStructureSorting(DataStructure.Sorting mDataStructureSorting) {
+        this.mDataStructureSorting = mDataStructureSorting;
+    }
 
     public ListDataSource(Fetch fetch) {
         super();
@@ -65,7 +75,7 @@ public class ListDataSource<T extends DataObject> extends DataSource {
 
             @Override
             public DataStructure<T> dataStructureForFetchResult(BaseFetchResult<T> fetchResult) {
-                return new DataStructure<>(fetchResult);
+                return new DataStructure<>(fetchResult, mDataStructureSorting, mDataStructureSortingProvider);
             }
         });
     }
@@ -140,7 +150,6 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             return;
         startContentRefreshing();
     }
-
     protected void itemsLoaded(BaseFetchResult<T> fetchResult) {
         if (shouldClearList()) {
             mDataStructure=null;
@@ -152,7 +161,6 @@ public class ListDataSource<T extends DataObject> extends DataSource {
                         itemsStoredListener.onSuccess();
                     }
                 }
-
                 @Override
                 public void onError(Throwable e) {
                     if (itemsStoredListener != null) {
@@ -233,6 +241,21 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         super.startContentRefreshing();
         runRequest();
     }
+    final public void startContentReloading() {
+        if (getCurrentState() == State.ERROR || getCurrentState() == State.NO_CONTENT)
+            changeStateTo(State.INIT);
+        if (getCurrentState() == State.LOAD_CONTENT || getCurrentState() == State.REFRESH_CONTENT)
+            return;
+        if (getCurrentState() != State.CONTENT) {
+            super.startContentLoading();
+            runRequest();
+            return;
+        }
+        mDataStructure = null;
+        mPaging.skip = 0;
+        super.startContentRefreshing();
+        runRequest();
+    }
     void processFetchResult(BaseFetchResult<T> fetchResult) {
         if(mDataStructure==null) {
             mDataStructure = dataStructureFromFetchResult(fetchResult);
@@ -245,7 +268,9 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     }
 
     DataStructure<T> dataStructureFromFetchResult(BaseFetchResult<T> fetchResult) {
-        return getDataStructureProvider() == null ? null : getDataStructureProvider().dataStructureForFetchResult(fetchResult);
+        DataStructure<T> datastructure = getDataStructureProvider() == null ?
+                null : getDataStructureProvider().dataStructureForFetchResult(fetchResult);
+        return datastructure;
     }
 
     public Fetch.Mode getFetchMode() {
@@ -268,6 +293,14 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     }
     public DataStructure<T> getDataStructure(){
         return mDataStructure;
+    }
+    public void setDataStructure(DataStructure value) {
+        mDataStructure = value;
+        if(mChangedListener!=null)
+            mChangedListener.changed();
+        if(mDataStructure!=null) {
+            mDataStructure.notifyListeners();
+        }
     }
     @Override
     public boolean hasContent() {

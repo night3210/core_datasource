@@ -64,7 +64,9 @@ public final class LogUtils {
                 .getMethodName();
         int lineNumber = Thread.currentThread().getStackTrace()[4]
                 .getLineNumber();
-        String logString = className + "." + methodName + "():" + lineNumber + ": " + message;
+
+        String logString = Thread.currentThread().getName() +
+                className + "." + methodName + "():" + lineNumber + ": " + message;
         if(loglevel >= logcatMinLoglevel)
             Log.println(loglevel, LOG_TAG, logString);
         try {

@@ -3,6 +3,7 @@ package com.night3210.datasource.core.fetch_result;
 import com.night3210.datasource.core.ErrorUtils;
 import com.night3210.datasource.core.listeners.DataObject;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -20,11 +21,23 @@ public abstract class BaseFetchResult<T extends DataObject> {
                 return;
             }
         } else {
-            if(!validateList(list)) {
+            if(validateList(list)) {
+                this.array = parseList((List) list);
+                return;
+            } else if(validateHashmap(list)) {
+                this.array = (List<T>) ((HashMap)list).get("objects_list");
                 return;
             }
         }
-        this.array = parseList((List) list);
+    }
+
+    protected boolean validateHashmap(Object object) {
+        if(object instanceof HashMap) {
+            HashMap map = (HashMap) object;
+            if(map.get("objects_list")!=null && map.get("objects_list") instanceof List)
+                return true;
+        }
+        return false;
     }
 
     protected boolean validateList(Object list) {

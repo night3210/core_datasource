@@ -1,7 +1,5 @@
 package com.night3210.datasource.core.data_structure;
 
-
-
 import com.night3210.datasource.core.fetch_result.BaseFetchResult;
 import com.night3210.datasource.core.listeners.ChangedCallback;
 
@@ -19,6 +17,7 @@ import com.night3210.datasource.core.listeners.DataObject;
  * Created by Developer on 1/28/2016.
  */
 public class DataStructure<T extends DataObject> {
+    // index path, can be used in tabs
     public static class IndexPath {
         int row, section;
         public IndexPath(int row, int section) {
@@ -32,28 +31,20 @@ public class DataStructure<T extends DataObject> {
             return section;
         }
     }
-
+    // Custom sorting for sort objecs
     public interface CustomSortingProvider<H extends DataObject> {
-        public List<H> sortedArrayFrom(List<H> sourceArray);
+        List<H> sortedArrayFrom(List<H> sourceArray);
     }
-
-    public void clear() {
-        sections.clear();
-    }
-    public <T> void addAll(List<T> newItems) {
-
-    }
-
     public enum Sorting {
         UpdatedAt,
+        UpdatedAtReverse,
         CreatedAt,
         CreatedAtReverse,
         Custom,
         NoSorting
     }
-    protected Sorting sorting = Sorting.CreatedAt;
+    protected Sorting sorting = Sorting.CreatedAt;      // by default, sort by CreatedAt
     protected CustomSortingProvider sortingProvider;
-
     protected CopyOnWriteArrayList<T> sourceArray;
     protected List<List<T>> sections;
     protected List<Map> metadata;
@@ -65,11 +56,14 @@ public class DataStructure<T extends DataObject> {
         this(fetchResult, sorting, null);
     }
     public DataStructure(BaseFetchResult<T> fetchResult, Sorting sorting, CustomSortingProvider sortingProvider) {
-        this.sorting = sorting;
+        if(sorting!=null)
+            this.sorting = sorting;
         this.sortingProvider = sortingProvider;
         processFetchResult(fetchResult);
     }
-
+    public void setSorting(Sorting sorting) {
+        this.sorting = sorting;
+    }
     public void processFetchResult(BaseFetchResult<T> fetchResult) {
         List<List<T>> frSections = fetchResult.getSections();
         for(int i=0;i<frSections.size();i++) {
@@ -77,7 +71,6 @@ public class DataStructure<T extends DataObject> {
         }
         notifyListeners();
     }
-
     protected void putSection(List<T> array, int section) {
         if(sections==null)
             sections=new CopyOnWriteArrayList<>();
@@ -85,7 +78,6 @@ public class DataStructure<T extends DataObject> {
             sections.add(new CopyOnWriteArrayList<T>());
         sections.set(section, array);
     }
-
     public int getSectionsCount() {
         return sections.size();
     }
@@ -98,7 +90,6 @@ public class DataStructure<T extends DataObject> {
     public Map getMetadataForSection(int section) {
         return metadata == null ? null : metadata.get(section);
     }
-
     public boolean removeItem(T item, int section) {
         List items=sections.get(section);
         int oldCount = items.size();
@@ -106,7 +97,6 @@ public class DataStructure<T extends DataObject> {
         notifyListeners();
         return items.size() != oldCount;
     }
-
     public void insertItem(T item, int section) {
         CopyOnWriteArrayList<T> array=new CopyOnWriteArrayList<>();
         array.add(item);
@@ -139,7 +129,7 @@ public class DataStructure<T extends DataObject> {
                     public int compare(DataObject lhs, DataObject rhs) {
                         Date rd=rhs.getUpdatedAt();
                         Date ld=lhs.getUpdatedAt();
-                        return rd.compareTo(ld);
+                        return rd.compareTo(ld)*(sorting==Sorting.UpdatedAtReverse?-1:1);
                     }
                 });
                 break;
@@ -174,10 +164,9 @@ public class DataStructure<T extends DataObject> {
         }
         return new CopyOnWriteArrayList<>(modifiableList);
     }
-    protected void notifyListeners() {
+    public void notifyListeners() {
         if(changedListener!=null)
             changedListener.changed();
-
     }
     public int dataSize() {
         int dataSize = 0;
@@ -186,11 +175,12 @@ public class DataStructure<T extends DataObject> {
                 dataSize+=list.size();
         return dataSize;
     }
-
     public T getItemForIndexPath(IndexPath path) {
         return sections.get(path.section).get(path.row);
     }
-
+    public Object getObjectForIndexPath(IndexPath path) {
+        return sections.get(path.section).get(path.row);
+    }
     public IndexPath getIndexPathForObject(T object) {
         for (int section = 0; section < getSectionsCount(); section++) {
             List<T> sectionList = sections.get(section);
@@ -203,7 +193,6 @@ public class DataStructure<T extends DataObject> {
         }
         return null;
     }
-
     /* package */ T getItemAtGlobalIndex(int globalIndex) {
         int counter = 0;
         for (List<T> section : sections) {
@@ -214,5 +203,10 @@ public class DataStructure<T extends DataObject> {
             counter = section.size();
         }
         throw new IndexOutOfBoundsException();
+    }
+    public void clear() {
+        sections.clear();
+    }
+    public <T> void addAll(List<T> newItems) {
     }
 }
