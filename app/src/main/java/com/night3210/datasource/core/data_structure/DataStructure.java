@@ -1,5 +1,6 @@
 package com.night3210.datasource.core.data_structure;
 
+import com.night3210.datasource.core.LogUtils;
 import com.night3210.datasource.core.fetch_result.BaseFetchResult;
 import com.night3210.datasource.core.listeners.ChangedCallback;
 
@@ -44,6 +45,7 @@ public class DataStructure<T extends DataObject> {
         NoSorting
     }
     protected Sorting sorting = Sorting.CreatedAt;      // by default, sort by CreatedAt
+
     protected CustomSortingProvider sortingProvider;
     protected CopyOnWriteArrayList<T> sourceArray;
     protected List<List<T>> sections;
@@ -165,6 +167,7 @@ public class DataStructure<T extends DataObject> {
         return new CopyOnWriteArrayList<>(modifiableList);
     }
     public void notifyListeners() {
+        LogUtils.logi("zff notifylisteners");
         if(changedListener!=null)
             changedListener.changed();
     }
@@ -208,5 +211,8 @@ public class DataStructure<T extends DataObject> {
         sections.clear();
     }
     public <T> void addAll(List<T> newItems) {
+    }
+    public void setSortingProvider(CustomSortingProvider sortingProvider) {
+        this.sortingProvider = sortingProvider;
     }
 }

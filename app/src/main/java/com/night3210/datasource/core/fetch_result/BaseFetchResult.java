@@ -1,6 +1,7 @@
 package com.night3210.datasource.core.fetch_result;
 
 import com.night3210.datasource.core.ErrorUtils;
+import com.night3210.datasource.core.LogUtils;
 import com.night3210.datasource.core.listeners.DataObject;
 
 import java.util.HashMap;
@@ -17,20 +18,23 @@ public abstract class BaseFetchResult<T extends DataObject> {
 
     public BaseFetchResult(Object list, boolean local) {
         if(local) {
-            if(!validateList(list)) {
-                return;
+            if(validateList(list)) {
+                this.array = parseList((List) list);
             }
         } else {
             if(validateList(list)) {
                 this.array = parseList((List) list);
                 return;
             } else if(validateHashmap(list)) {
-                this.array = (List<T>) ((HashMap)list).get("objects_list");
+                LogUtils.logi("xxa online. is a hashmap");
+                this.array = parseHashMap(((HashMap)list).get("objects_list"));
                 return;
             }
         }
     }
-
+    protected List<T> parseHashMap(Object list) {
+        return (List<T>) ((HashMap)list).get("objects_list");
+    }
     protected boolean validateHashmap(Object object) {
         if(object instanceof HashMap) {
             HashMap map = (HashMap) object;
@@ -39,10 +43,10 @@ public abstract class BaseFetchResult<T extends DataObject> {
         }
         return false;
     }
-
     protected boolean validateList(Object list) {
-        if (!(list instanceof List<?>)) {
-            failWithReason(getClass().getName());
+        boolean chk = list instanceof List;
+        LogUtils.logi("xxa "+chk+"/"+list);
+        if (chk==false) {
             return false;
         }
         return true;
@@ -66,6 +70,7 @@ public abstract class BaseFetchResult<T extends DataObject> {
 
     protected void failWithReason(String reason) {
         lastError = ErrorUtils.createWrongServerDataException(reason);
+        LogUtils.loge("xxa ds failed:"+reason);
     }
 
     public List<List<T>> getSections() {

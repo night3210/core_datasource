@@ -21,26 +21,22 @@ import java.io.IOException;
 public final class LogUtils {
     private static String LOG_TAG = "datasource";
 
-    private static boolean mEnableLogs = true;
-    private static String mFilesDir;
-    private static String mLogFile;
+    private static boolean enableLogs = true;
+    private static String filesDir;
+    private static String logFile;
     private static FileOutputStream fo=null;
+    private static int logcatMinLoglevel = Log.VERBOSE;
+    private static int fileMinLoglevel = Log.VERBOSE;
 
     public static void setLogcatMinLoglevel(int logcatMinLoglevel) {
         LogUtils.logcatMinLoglevel = logcatMinLoglevel;
     }
-
     public static void setFileMinLoglevel(int fileMinLoglevel) {
         LogUtils.fileMinLoglevel = fileMinLoglevel;
     }
-
-    private static int logcatMinLoglevel = Log.VERBOSE;
-    private static int fileMinLoglevel = Log.VERBOSE;
-
     private LogUtils() {
         throw new AssertionError("non-instantiable class");
     }
-
     public static void logv(String message) {
         log(message, Log.VERBOSE);
     }
@@ -54,30 +50,31 @@ public final class LogUtils {
         log(message, Log.ERROR);
     }
     public static void log(String message, int loglevel) {
-        if (!mEnableLogs)
+        if (!enableLogs)
             return;
-        String fullClassName = Thread.currentThread().getStackTrace()[5]
-                .getClassName();
-        String className = fullClassName.substring(fullClassName
-                .lastIndexOf(".") + 1);
-        String methodName = Thread.currentThread().getStackTrace()[4]
-                .getMethodName();
-        int lineNumber = Thread.currentThread().getStackTrace()[4]
-                .getLineNumber();
+        StackTraceElement[] trace = Thread.currentThread().getStackTrace();
+        if(trace.length<5) {
+            new Exception().printStackTrace();
+            throw new RuntimeException("Too small stacktrace for log");
+        }
+        String fullClassName = trace[5].getClassName();
+        String className = fullClassName.substring(fullClassName.lastIndexOf(".") + 1);
+        String methodName = trace[4].getMethodName();
+        int lineNumber = trace[4].getLineNumber();
 
-        String logString = Thread.currentThread().getName() +
-                className + "." + methodName + "():" + lineNumber + ": " + message;
+        String logString = Thread.currentThread().getName()
+                + " thread, "+className + "." + methodName
+                + "():" + lineNumber + ": " + message;
+
         if(loglevel >= logcatMinLoglevel)
             Log.println(loglevel, LOG_TAG, logString);
         try {
             if(loglevel >= fileMinLoglevel)
                 writeExceptionToFile(logString,loglevel);
-
         } catch (Exception e) {
             //e.printStackTrace();
         }
     }
-
     private static void writeExceptionToFile(String logString, int loglevel) throws IOException {
         String logLevelStr = "v";
         String endstring = "\r\n";
@@ -96,38 +93,34 @@ public final class LogUtils {
         e.printStackTrace();
     }
     public static void initialize(Application app) {
-        mFilesDir = Environment.getExternalStorageDirectory().getAbsolutePath()+"/data/forschoolers";
-        mLogFile = mFilesDir+"/bug-reports/customlogs.txt";
-        final File screenshotsDir = new File(mFilesDir);
-
-        //noinspection ResultOfMethodCallIgnored
+        filesDir = Environment.getDataDirectory()+"/logs/";
+        logFile = filesDir + "customlogs.txt";
+        final File screenshotsDir = new File(filesDir);
         boolean result=screenshotsDir.mkdirs();
         if(!result) {
-            Log.e(LOG_TAG,"CANNOT CREATE LOG DIRS");
+            Log.e(LOG_TAG, "CANNOT CREATE LOG DIRS "+filesDir);
         }
         clearLogFile();
         initLogFile();
-        LogUtils.loge("files dir:"+mLogFile);
+        LogUtils.logi("files dir:"+ logFile);
     }
     public static String getLogLocation(){
-        return mLogFile;
+        return logFile;
     }
 
     private static void initLogFile() {
         try {
-            fo=new FileOutputStream(mLogFile);
+            fo=new FileOutputStream(logFile);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             fo = null;
         }
     }
-
     private static void clearLogFile() {
-        File logfile = new File(mLogFile);
+        File logfile = new File(logFile);
         if(logfile.exists())
             logfile.delete();
     }
-
     public static void finish() {
         if(fo==null)
             return;
