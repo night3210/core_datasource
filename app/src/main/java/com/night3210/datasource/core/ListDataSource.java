@@ -78,11 +78,9 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         if (fetchMode == Fetch.Mode.Online) {
             return; // Offline disabled
         }
-        LogUtils.logi("xxa fetch offline:");
         fetch.fetchOffline(new DataCallback() {
             @Override
             public void onSuccess(Object result) {
-                LogUtils.logi("xxa fetched offline:");
                 if (dataStructure == null || refresh) {
                     if (fetchMode == Fetch.Mode.Offline && shouldClearList()) {
                         dataStructure = null;
@@ -104,7 +102,6 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         });
     }
     protected void runRequest() {
-        LogUtils.logi("xxa runrequest");
         if (fetchMode == Fetch.Mode.Offline) {
             fetchOfflineData(true);
             return;
@@ -133,25 +130,27 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     protected void itemsLoaded(BaseFetchResult<T> fetchResult) {
         if (shouldClearList()) {
             dataStructure =null;
-            // Not very good, but for now - ok
-            fetch.storeItems(fetchResult, new BoolCallback() {
-                @Override
-                public void onSuccess() {
-                    if (itemsStoredListener != null) {
-                        itemsStoredListener.onSuccess();
-                    }
-                }
-                @Override
-                public void onError(Throwable e) {
-                    if (itemsStoredListener != null) {
-                        itemsStoredListener.onError(e);
-                    }
-                }
-            });
+            storeItems(fetchResult);
         }
         processFetchResult(fetchResult);
         updatePagingFlagsForListSize();
         contentLoaded(null);
+    }
+    private void storeItems(BaseFetchResult<T> fetchResult) {
+        fetch.storeItems(fetchResult, new BoolCallback() {
+            @Override
+            public void onSuccess() {
+                if (itemsStoredListener != null) {
+                    itemsStoredListener.onSuccess();
+                }
+            }
+            @Override
+            public void onError(Throwable e) {
+                if (itemsStoredListener != null) {
+                    itemsStoredListener.onError(e);
+                }
+            }
+        });
     }
     protected DataCallback createResultBlock() {
         return new DataCallback() {
@@ -213,7 +212,9 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             runRequest();
             return;
         }
-        paging.skip = getDataStructure().dataSize();
+        // Refresh mean update, not load next
+        paging.skip = 0;
+        paging.limit = dataStructure.dataSize();
         super.startContentRefreshing();
         runRequest();
     }

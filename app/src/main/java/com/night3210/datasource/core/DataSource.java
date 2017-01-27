@@ -40,7 +40,8 @@ public abstract class DataSource extends Observable{
     public void contentLoaded(Throwable th) {
         if (th != null) {
             this.currentError = th;
-            fail();
+            if(getCurrentState()!=State.CONTENT)
+                fail();
             return;
         }
         if (hasContent()) {

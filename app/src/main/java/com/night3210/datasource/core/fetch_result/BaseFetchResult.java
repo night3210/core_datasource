@@ -24,16 +24,13 @@ public abstract class BaseFetchResult<T extends DataObject> {
         } else {
             if(validateList(list)) {
                 this.array = parseList((List) list);
-                return;
             } else if(validateHashmap(list)) {
-                LogUtils.logi("xxa online. is a hashmap");
                 this.array = parseHashMap(((HashMap)list).get("objects_list"));
-                return;
             }
         }
     }
     protected List<T> parseHashMap(Object list) {
-        return (List<T>) ((HashMap)list).get("objects_list");
+        return (List<T>) list;
     }
     protected boolean validateHashmap(Object object) {
         if(object instanceof HashMap) {
@@ -44,9 +41,8 @@ public abstract class BaseFetchResult<T extends DataObject> {
         return false;
     }
     protected boolean validateList(Object list) {
-        boolean chk = list instanceof List;
-        LogUtils.logi("xxa "+chk+"/"+list);
-        if (chk==false) {
+        boolean isList = list instanceof List;
+        if (!isList) {
             return false;
         }
         return true;
@@ -70,7 +66,6 @@ public abstract class BaseFetchResult<T extends DataObject> {
 
     protected void failWithReason(String reason) {
         lastError = ErrorUtils.createWrongServerDataException(reason);
-        LogUtils.loge("xxa ds failed:"+reason);
     }
 
     public List<List<T>> getSections() {

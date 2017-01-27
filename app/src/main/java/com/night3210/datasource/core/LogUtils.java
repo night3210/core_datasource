@@ -63,7 +63,7 @@ public final class LogUtils {
         int lineNumber = trace[4].getLineNumber();
 
         String logString = Thread.currentThread().getName()
-                + " thread, "+className + "." + methodName
+                + " thrd: "+className + "." + methodName
                 + "():" + lineNumber + ": " + message;
 
         if(loglevel >= logcatMinLoglevel)

@@ -126,12 +126,13 @@ public class DataStructure<T extends DataObject> {
         List<T> modifiableList = new ArrayList<>(sectionArray);
         switch (sorting) {
             case UpdatedAt:
+            case UpdatedAtReverse:
                 Collections.sort(modifiableList, new Comparator<DataObject>() {
                     @Override
                     public int compare(DataObject lhs, DataObject rhs) {
                         Date rd=rhs.getUpdatedAt();
                         Date ld=lhs.getUpdatedAt();
-                        return rd.compareTo(ld)*(sorting==Sorting.UpdatedAtReverse?-1:1);
+                        return rd.compareTo(ld) * (sorting == Sorting.UpdatedAtReverse ? -1 : 1);
                     }
                 });
                 break;
@@ -141,17 +142,7 @@ public class DataStructure<T extends DataObject> {
                     public int compare(DataObject lhs, DataObject rhs) {
                         Date rd=rhs.getCreatedAt();
                         Date ld=lhs.getCreatedAt();
-                        return rd.compareTo(ld);
-                    }
-                });
-                break;
-            case CreatedAtReverse:
-                Collections.sort(modifiableList, new Comparator<DataObject>() {
-                    @Override
-                    public int compare(DataObject lhs, DataObject rhs) {
-                        Date ld=rhs.getCreatedAt();
-                        Date rd=lhs.getCreatedAt();
-                        return rd.compareTo(ld);
+                        return rd.compareTo(ld) * (sorting == Sorting.CreatedAtReverse ? -1 : 1);
                     }
                 });
                 break;
