@@ -104,10 +104,9 @@ public final class LogUtils {
         initLogFile();
         LogUtils.logi("files dir:"+ logFile);
     }
-    public static String getLogLocation(){
+    public static String getLogLocation() {
         return logFile;
     }
-
     private static void initLogFile() {
         try {
             fo=new FileOutputStream(logFile);
@@ -130,5 +129,8 @@ public final class LogUtils {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+    public static void setLogTag(String tag) {
+        LOG_TAG = tag;
     }
 }

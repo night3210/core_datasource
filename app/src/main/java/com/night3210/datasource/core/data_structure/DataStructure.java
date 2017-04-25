@@ -137,6 +137,7 @@ public class DataStructure<T extends DataObject> {
                 });
                 break;
             case CreatedAt:
+            case CreatedAtReverse:
                 Collections.sort(modifiableList, new Comparator<DataObject>() {
                     @Override
                     public int compare(DataObject lhs, DataObject rhs) {
