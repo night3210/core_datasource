@@ -195,7 +195,7 @@ public class DataStructure<T extends DataObject> {
             if (section.size() < sectionIndex) {
                 return section.get(sectionIndex);
             }
-            counter = section.size();
+            counter += section.size();
         }
         throw new IndexOutOfBoundsException();
     }
