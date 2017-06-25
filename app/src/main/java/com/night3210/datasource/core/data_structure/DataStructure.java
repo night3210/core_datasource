@@ -192,7 +192,7 @@ public class DataStructure<T extends DataObject> {
         int counter = 0;
         for (List<T> section : sections) {
             int sectionIndex = globalIndex - counter;
-            if (section.size() < sectionIndex) {
+            if (section.size() > sectionIndex) {
                 return section.get(sectionIndex);
             }
             counter += section.size();
