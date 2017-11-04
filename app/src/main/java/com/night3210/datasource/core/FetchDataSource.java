@@ -215,6 +215,10 @@ public class FetchDataSource<T extends DataObject> extends DataSource {
         this.fetchedObjectChangedListener = fetchedObjectChangedListener;
     }
 
+    public Object getFetchedObject() {
+        return fetchedObject;
+    }
+
     protected void reloadDataWithDelay() {
         int delay = defaultFetchDelay;
         switch (getCurrentState()) {
