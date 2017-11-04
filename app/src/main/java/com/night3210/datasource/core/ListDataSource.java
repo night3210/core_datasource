@@ -9,20 +9,27 @@ import com.night3210.datasource.core.listeners.DataCallback;
 import com.night3210.datasource.core.listeners.DataObject;
 import com.night3210.datasource.core.listeners.Fetch;
 
+import org.jetbrains.annotations.NotNull;
+
 public class ListDataSource<T extends DataObject> extends DataSource {
     private final int DEFAULT_LIMIT = 20;
+    protected int defaultPageSize = DEFAULT_LIMIT;
     protected Paging paging;
     protected boolean pagingEnabled = true;
-    protected boolean canLoadMore;
+    protected boolean canLoadMore = false;
+    protected boolean autoAdvance = false;
     protected ChangedCallback changedListener;
     protected DataStructure<T> dataStructure;
     protected Fetch fetch;
     protected Fetch.Mode fetchMode = Fetch.Mode.OnlineOffline;
-    protected FetchResultProvider<T> fetchResultProvider;
+    protected BaseFetchResult.Provider<T> fetchResultProvider;
     protected DataStructureProvider<T> dataStructureProvider;
     protected BoolCallback itemsStoredListener;
-    protected DataStructure.Sorting dataStructureSorting;
-    protected DataStructure.CustomSortingProvider dataStructureSortingProvider;
+
+    protected DataSortingProvider dataSortingProvider;
+    protected DataStructure.CustomSortingProvider dataCustomSortingProvider;
+
+    protected StoragePolicy storagePolicy = StoragePolicy.FIRST_PAGE;
 
     public class Paging {
         private int skip;
@@ -34,12 +41,14 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             return skip;
         }
     }
-    public interface FetchResultProvider<H extends DataObject> {
-        BaseFetchResult<H> fetchResultForLocal(Object object);
-        BaseFetchResult<H> fetchResult(Object object);
-    }
+
+    public enum StoragePolicy {FIRST_PAGE, ALL_DATA}
+
     public interface DataStructureProvider<H extends DataObject> {
         DataStructure<H> dataStructureForFetchResult(BaseFetchResult<H> fetchResult);
+    }
+    public interface DataSortingProvider<H extends DataObject> {
+        DataStructure.Sorting dataSortingForFetchResult(BaseFetchResult<H> fetchResult);
     }
 
     public ListDataSource(Fetch fetch) {
@@ -48,7 +57,7 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             throw new IllegalArgumentException("No fetch specified");
         this.fetch = fetch;
         this.pagingEnabled = true;
-        setFetchResultProvider(new FetchResultProvider<T>() {
+        setFetchResultProvider(new BaseFetchResult.Provider<T>() {
             @Override
             public BaseFetchResult<T> fetchResultForLocal(Object object) {
                 return new SimpleFetchResult<>(object,true);
@@ -58,22 +67,18 @@ public class ListDataSource<T extends DataObject> extends DataSource {
                 return new SimpleFetchResult<>(object,false);
             }
         });
-        setDataStructureProvider(new DataStructureProvider<T>() {
-            @Override
-            public DataStructure<T> dataStructureForFetchResult(BaseFetchResult<T> fetchResult) {
-                return new DataStructure<>(fetchResult, dataStructureSorting, dataStructureSortingProvider);
-            }
-        });
     }
+
     public Paging getPaging() {
         if(!pagingEnabled)
             return null;
         if(paging == null) {
             paging = new Paging();
-            paging.limit = DEFAULT_LIMIT;
+            paging.limit = getDefaultPageSize();
         }
         return paging;
     }
+
     protected void fetchOfflineData(final boolean refresh) {
         if (fetchMode == Fetch.Mode.Online) {
             return; // Offline disabled
@@ -88,8 +93,9 @@ public class ListDataSource<T extends DataObject> extends DataSource {
                     BaseFetchResult<T> fetchResult = createFetchResultForLocalObject(result);
                     processFetchResult(fetchResult);
                 }
-                if(refresh)
+                if(refresh) {
                     contentLoaded(null);
+                }
             }
             @Override
             public void onError(Throwable th) {
@@ -101,6 +107,13 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             }
         });
     }
+
+    public void resetData() {
+        canLoadMore = true;
+        paging = null;
+        dataStructure = null;
+    }
+
     protected void runRequest() {
         if (fetchMode == Fetch.Mode.Offline) {
             fetchOfflineData(true);
@@ -108,9 +121,15 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         }
         fetch.fetchOnline(getPaging(), createResultBlock());
     }
+
     protected boolean shouldClearList() {
+        if (!pagingEnabled) {
+            return true;
+        }
+
         return getPaging().skip == 0;
     }
+
     protected void updatePagingFlagsForListSize() {
         if (!pagingEnabled)
             return;
@@ -118,24 +137,27 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         canLoadMore = paging.getSkip() + paging.getLimit() <= size;
         paging.skip = size;
     }
-    public void loadMoreIfPossible() {
-        if (!canLoadMore)
-            return;
-        if (getCurrentState() != DataSource.State.CONTENT)
-            return;
-        if (getPaging().skip > dataStructure.dataSize())
-            return;
-        startContentRefreshing();
-    }
+
     protected void itemsLoaded(BaseFetchResult<T> fetchResult) {
+        boolean calledForStore = false;
         if (shouldClearList()) {
             dataStructure =null;
+            if (storagePolicy == StoragePolicy.FIRST_PAGE) {
+                storeItems(fetchResult);
+                calledForStore = true;
+            }
+        }
+
+        if (storagePolicy == StoragePolicy.ALL_DATA && !calledForStore) {
             storeItems(fetchResult);
         }
+
         processFetchResult(fetchResult);
         updatePagingFlagsForListSize();
         contentLoaded(null);
+        loadNextPageIfAutoAdvance();
     }
+
     private void storeItems(BaseFetchResult<T> fetchResult) {
         fetch.storeItems(fetchResult, new BoolCallback() {
             @Override
@@ -152,13 +174,14 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             }
         });
     }
+
     protected DataCallback createResultBlock() {
         return new DataCallback() {
             @Override
             public void onSuccess(Object result) {
                 BaseFetchResult<T> res = createFetchResultFor(result);
                 if (!res.validate()) {
-                    parseRequestDidFail(res.getLastError());
+                    contentLoaded(res.getLastError());
                     return;
                 }
                 if(getCurrentState()!=State.CONTENT)
@@ -170,73 +193,61 @@ public class ListDataSource<T extends DataObject> extends DataSource {
             }
         };
     }
+
     protected boolean failIfNeeded(Throwable e) {
         if (e != null) {//TODO ADD CHECK ON CONTENT?
-            parseRequestDidFail(e);
+            contentLoaded(e);
             return true;
         }
         return false;
     }
-    public void addItem(T item){
-        dataStructure.insertItem(item,0);
-    }
-    protected void parseRequestDidFail(Throwable th) {
-        contentLoaded(th);
-    }
+
     @Override
     final public void startContentLoading() {
         super.startContentLoading();
-        fetchOfflineData(false);
+        if (fetchMode != Fetch.Mode.Offline) {
+            fetchOfflineData(false);
+        }
         runRequest();
     }
-    public void refreshContentIfPossible() {
-        if (getCurrentState() == State.INIT
-                || getCurrentState() == State.LOAD_CONTENT
-                || getCurrentState() == State.REFRESH_CONTENT) {
-            return;
-        }
-        if (getPaging() != null) {
-            getPaging().skip = 0;
-        }
-        super.startContentRefreshing();
-        runRequest();
-    }
+
     @Override
     final public void startContentRefreshing() {
-        if (getCurrentState() == State.ERROR || getCurrentState() == State.NO_CONTENT)
-            changeStateTo(State.INIT);
-        if (getCurrentState() == State.LOAD_CONTENT || getCurrentState() == State.REFRESH_CONTENT)
-            return;
-        if (getCurrentState() != State.CONTENT) {
-            super.startContentLoading();
-            runRequest();
-            return;
-        }
-        // Refresh mean update, not load next
-        paging.skip = 0;
-        paging.limit = dataStructure.dataSize();
         super.startContentRefreshing();
         runRequest();
     }
-    final public void startContentReloading() {
-        if (getCurrentState() == State.ERROR || getCurrentState() == State.NO_CONTENT)
-            changeStateTo(State.INIT);
-        if (getCurrentState() == State.LOAD_CONTENT || getCurrentState() == State.REFRESH_CONTENT)
-            return;
-        if (getCurrentState() != State.CONTENT) {
-            super.startContentLoading();
-            runRequest();
-            return;
+
+    public boolean refreshContentIfPossible() {
+        if (getCurrentState() == State.INIT) {
+            throw new IllegalStateException("You need to call startContentLoading first");
         }
-        dataStructure = null;
-        paging.skip = 0;
-        super.startContentRefreshing();
-        runRequest();
+        if (getCurrentState() == State.LOAD_CONTENT
+                || getCurrentState() == State.REFRESH_CONTENT) {
+            return false;
+        }
+        paging = null;
+        startContentRefreshing();
+        return true;
     }
-    void processFetchResult(BaseFetchResult<T> fetchResult) {
+
+    public boolean loadMoreIfPossible() {
+        if (getCurrentState() == State.INIT) {
+            throw new IllegalStateException("You need to call startContentLoading first");
+        }
+        if (getCurrentState() != State.CONTENT) {
+            return false;
+        }
+
+        // We shouldn't check here for canLoadMore
+        // Case user awaits for next item to appear
+        // and swipe reload from bottom
+        startContentRefreshing();
+        return true;
+    }
+
+    protected void processFetchResult(BaseFetchResult<T> fetchResult) {
         if(dataStructure ==null) {
             dataStructure = dataStructureFromFetchResult(fetchResult);
-            dataStructure.processFetchResult(fetchResult);
         } else {
             dataStructure.processFetchResult(fetchResult);
         }
@@ -244,20 +255,34 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         if(changedListener !=null)
             changedListener.changed();
     }
+
+    protected void loadNextPageIfNeeded() {
+        if (!canLoadMore)
+            return;
+        if (getCurrentState() != DataSource.State.CONTENT)
+            return;
+        startContentRefreshing();
+    }
+
     DataStructure<T> dataStructureFromFetchResult(BaseFetchResult<T> fetchResult) {
-        if(dataStructureProvider==null)
-            return null;
-        return getDataStructureProvider().dataStructureForFetchResult(fetchResult);
+        if(dataStructureProvider != null) {
+            if (dataSortingProvider != null) {
+                throw new IllegalStateException("dataSortingProvider is ignored if you are using dataStructureProvider");
+            }
+            return dataStructureProvider.dataStructureForFetchResult(fetchResult);
+        }
+
+        if (dataSortingProvider != null) {
+            DataStructure.Sorting sorting = dataSortingProvider.dataSortingForFetchResult(fetchResult);
+            return new DataStructure<T>(fetchResult, sorting, dataCustomSortingProvider);
+        }
+        return new DataStructure<T>(fetchResult);
     }
     public Fetch.Mode getFetchMode() {
         return fetchMode;
     }
     public void setFetchMode(Fetch.Mode mFetchMode) {
         this.fetchMode = mFetchMode;
-    }
-    @Override
-    final public void contentLoaded(Throwable th) {
-        super.contentLoaded(th);
     }
 
     protected BaseFetchResult<T> createFetchResultFor(Object result) {
@@ -269,41 +294,40 @@ public class ListDataSource<T extends DataObject> extends DataSource {
     public DataStructure<T> getDataStructure(){
         return dataStructure;
     }
-    public void setDataStructure(DataStructure value) {
-        dataStructure = value;
-        if(changedListener !=null)
-            changedListener.changed();
-        if(dataStructure !=null) {
-            dataStructure.notifyListeners();
-        }
-    }
+
     @Override
     public boolean hasContent() {
-        return dataStructure != null && dataStructure.dataSize() > 0;
+        return dataStructure != null && dataStructure.hasContent();
     }
 
-    public FetchResultProvider<T> getFetchResultProvider() {
+    public BaseFetchResult.Provider<T> getFetchResultProvider() {
         return fetchResultProvider;
     }
 
-    public void setFetchResultProvider(FetchResultProvider<T> fetchResultProvider) {
+    public void setFetchResultProvider(BaseFetchResult.Provider<T> fetchResultProvider) {
         this.fetchResultProvider = fetchResultProvider;
     }
+
     public DataStructureProvider<T> getDataStructureProvider() {
         return dataStructureProvider;
     }
+
     public void setDataStructureProvider(DataStructureProvider<T> dataStructureProvider) {
         this.dataStructureProvider = dataStructureProvider;
     }
+
     public BoolCallback getItemsStoredListener() {
         return itemsStoredListener;
     }
+
     public void setItemsStoredListener(BoolCallback itemsStoredListener) {
         this.itemsStoredListener = itemsStoredListener;
     }
+
     public ChangedCallback getChangedListener() {
         return changedListener;
     }
+
     public void setChangedListener(ChangedCallback mChangedListener) {
         this.changedListener = mChangedListener;
         if (dataStructure != null) {
@@ -311,13 +335,47 @@ public class ListDataSource<T extends DataObject> extends DataSource {
         }
     }
     public void setDataStructureSortingProvider(DataStructure.CustomSortingProvider sortingProvider) {
-        this.dataStructureSortingProvider = sortingProvider;
+        this.dataCustomSortingProvider = sortingProvider;
         if(dataStructure!=null)
             dataStructure.setSortingProvider(sortingProvider);
     }
-    public void setDataStructureSorting(DataStructure.Sorting sorting) {
-        this.dataStructureSorting = sorting;
-        if(dataStructure!=null)
-            dataStructure.setSorting(sorting);
+
+    public int getDefaultPageSize() {
+        return defaultPageSize;
+    }
+
+    public void setDefaultPageSize(int defaultPageSize) {
+        this.defaultPageSize = defaultPageSize;
+    }
+
+    public StoragePolicy getStoragePolicy() {
+        return storagePolicy;
+    }
+
+    public void setStoragePolicy(@NotNull StoragePolicy storagePolicy) {
+        this.storagePolicy = storagePolicy;
+    }
+
+    protected void loadNextPageIfAutoAdvance() {
+        if (!autoAdvance) {
+            return;
+        }
+        if (!pagingEnabled) {
+            return;
+        }
+        new android.os.Handler().post(new Runnable() {
+            @Override
+            public void run() {
+                loadNextPageIfNeeded();
+            }
+        });
+    }
+
+    public boolean isAutoAdvance() {
+        return autoAdvance;
+    }
+
+    public void setAutoAdvance(boolean autoAdvance) {
+        this.autoAdvance = autoAdvance;
     }
 }

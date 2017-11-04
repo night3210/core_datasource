@@ -99,13 +99,15 @@ public class DataStructure<T extends DataObject> {
         notifyListeners();
         return items.size() != oldCount;
     }
+
     public void insertItem(T item, int section) {
         CopyOnWriteArrayList<T> array=new CopyOnWriteArrayList<>();
         array.add(item);
         sections.set(section, processItems(array, section));
         notifyListeners();
     }
-    boolean hasContent() {
+
+    public boolean hasContent() {
         if(sections==null)
             return false;
         for(List list:sections)
@@ -113,6 +115,7 @@ public class DataStructure<T extends DataObject> {
                 return true;
         return false;
     }
+
     public List<T> processItems(List<T> items, int section) {
         if(items==null)
             return null;

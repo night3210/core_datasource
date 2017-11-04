@@ -13,19 +13,28 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Created by Developer on 2/12/2016.
  */
 public abstract class BaseFetchResult<T extends DataObject> {
-    protected List<T> array;
+    protected List<T> items;
     protected Throwable lastError;
+
+    public List<T> getItems() {
+        return items;
+    }
+
+    public interface Provider<H extends DataObject> {
+        BaseFetchResult<H> fetchResultForLocal(Object object);
+        BaseFetchResult<H> fetchResult(Object object);
+    }
 
     public BaseFetchResult(Object list, boolean local) {
         if(local) {
             if(validateList(list)) {
-                this.array = parseList((List) list);
+                this.items = parseList((List) list);
             }
         } else {
             if(validateList(list)) {
-                this.array = parseList((List) list);
+                this.items = parseList((List) list);
             } else if(validateHashmap(list)) {
-                this.array = parseHashMap(((HashMap)list).get("objects_list"));
+                this.items = parseHashMap(((HashMap)list).get("objects_list"));
             }
         }
     }
@@ -70,7 +79,7 @@ public abstract class BaseFetchResult<T extends DataObject> {
 
     public List<List<T>> getSections() {
         List<List<T>> list=new CopyOnWriteArrayList<>();
-        list.add(array);
+        list.add(items);
         return list;
     }
 
