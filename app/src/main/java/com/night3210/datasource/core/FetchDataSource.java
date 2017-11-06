@@ -17,7 +17,7 @@ public class FetchDataSource<T extends DataObject> extends DataSource {
     private final int DEFAULT_RELOAD_TIME = 15000;
     private final int DEFAULT_ERROR_RELOAD_TIME = 5000;
 
-    private WeakHandler mHandler;
+    private WeakHandler mHandler = new WeakHandler();
 
     protected int defaultFetchDelay;  // 15 second. How long till we reload data
     protected int defaultErrorFetchDelay; // 5 second. How long till we reload data if error occurred
@@ -233,12 +233,14 @@ public class FetchDataSource<T extends DataObject> extends DataSource {
                 break;
         }
 
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                refreshContentIfPossible();
-            }
-        }, delay);
+        if (defaultFetchDelay >= 0) {
+            mHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    refreshContentIfPossible();
+                }
+            }, delay);
+        }
     }
 
     @Override
